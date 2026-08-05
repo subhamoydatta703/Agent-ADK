@@ -8,11 +8,17 @@ export class Agent {
         this.llm = llm;
     }
 
-    async run(content: string): Promise<Message[]> {
+    async run(content: string): Promise<string> {
         this.messages.push({ role: "user", content });
         const response = await this.llm.generate(this.messages);
         this.messages.push(response);
-        return this.messages;
+        const lastMessage = this.messages[this.messages.length - 1];
+        // console.log("=== Msg array ===");
+        // console.log(response);
+        // console.log("=== End Response ===");
+        // console.log(this.messages);
+        // console.log("=== End Msg array ===");
+        return "AI: " + (lastMessage?.content || "");
     }
 
 }

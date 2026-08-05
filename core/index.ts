@@ -1,13 +1,14 @@
 import { Agent } from "./Agent";
 import { FakeLLM } from "./FakeLLM";
+import { GeminiProvider } from "../providers/GeminiProvider";
 
-
+const llm = new GeminiProvider(process.env.GEMINI_API_KEY!);
+const agent = new Agent(llm);
 async function main(content: string){
-    const llm = new FakeLLM();
-    const agent = new Agent(llm);
-    const output = await agent.run(content);
-    console.log(output);
+    const op = await agent.run(content);
+    return op
+    
 }
 
-main("Hello, how are you?");
-main("What is your name?");
+console.log(await main("Hi, I am Subhamoy."));
+console.log(await main("What is my name?"));
