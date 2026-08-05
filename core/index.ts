@@ -5,8 +5,9 @@ import { GeminiProvider } from "../providers/GeminiProvider";
 const llm = new GeminiProvider(process.env.GEMINI_API_KEY!);
 const agent = new Agent(llm);
 async function main(content: string){
-    const op = await agent.run(content);
-    return op
+    const output = await agent.run(content);
+    const lastMessage = output.content;
+    return "AI: " + lastMessage;
     
 }
 
