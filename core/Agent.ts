@@ -1,17 +1,17 @@
 import { type Message } from "./Message";
-import { FakeLLM } from "./FakeLLM";
+import { type LLMProvider } from "./LLMProvider";
 
 export class Agent {
-    private llm = new FakeLLM();
+    private llm: LLMProvider;
     private messages: Message[] = [];
-    // constructor() {
-        
-    // }
+    constructor(llm: LLMProvider) {
+        this.llm = llm;
+    }
 
     async run(content: string): Promise<Message[]> {
         this.messages.push({ role: "user", content });
-        const response = await this.llm.respond({ role: "user", content });
-        this.messages.push(...response);
+        const response = await this.llm.generate(this.messages);
+        this.messages.push(response);
         return this.messages;
     }
 
