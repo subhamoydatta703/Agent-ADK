@@ -1,7 +1,7 @@
 
 
-import type { Message } from "../core/Message";
-import type { LLMProvider } from "../core/LLMProvider"
+import type { Message } from "../agent/Message";
+import type { LLMProvider } from "../agent/LLMProvider"
 import { GoogleGenAI } from "@google/genai"
 
 export class GeminiProvider implements LLMProvider {

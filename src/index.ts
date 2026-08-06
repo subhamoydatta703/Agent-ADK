@@ -1,6 +1,6 @@
-import { Agent } from "./Agent";
-import { FakeLLM } from "./FakeLLM";
-import { GeminiProvider } from "../providers/GeminiProvider";
+import { Agent } from "./agent/Agent";
+import { FakeLLM } from "./agent/FakeLLM";
+import { GeminiProvider } from "./providers/GeminiProvider";
 
 const llm = new GeminiProvider(process.env.GEMINI_API_KEY!);
 const agent = new Agent(llm);
