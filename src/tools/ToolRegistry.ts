@@ -1,7 +1,9 @@
+import { z } from "zod";
+
 export interface Tool{
     name: string;
     description: string;
-    parameters: any;
+    parameters: z.ZodSchema;
     execute: (args: any) => Promise<any>;
 }
 
@@ -25,5 +27,5 @@ export class ToolRegistry{
 
 export interface ToolCall {
     name: string;
-    arguments: Record<string, any>;
+    params: Record<string, unknown>;
 }

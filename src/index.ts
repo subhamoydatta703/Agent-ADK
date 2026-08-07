@@ -1,15 +1,20 @@
 import { Agent } from "./agent/Agent";
-import { FakeLLM } from "./agent/FakeLLM";
 import { GeminiProvider } from "./providers/GeminiProvider";
+import { countFile } from "./tools/FileTools";
+import { ToolRegistry } from "./tools/ToolRegistry";
+import path from "path";
+
 
 const llm = new GeminiProvider(process.env.GEMINI_API_KEY!);
-const agent = new Agent(llm);
+const toolRegistry = new ToolRegistry();
+toolRegistry.registerTool(countFile);
+const agent = new Agent(llm, toolRegistry);
 async function main(content: string){
     const output = await agent.run(content);
-    const lastMessage = output.content;
-    return "AI: " + lastMessage;
+    // const lastMessage = output.text;
+
+    return "AI: " + JSON.stringify(output);
     
 }
 
-console.log(await main("Hi, I am Subhamoy."));
-console.log(await main("What is my name?"));
+console.log(await main("count the number of files in the directory of E:\\my_agent_adk\\src"));
