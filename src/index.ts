@@ -13,8 +13,8 @@ async function main(content: string){
     const output = await agent.run(content);
     // const lastMessage = output.text;
 
-    return "AI: " + JSON.stringify(output);
+    return "AI: " + JSON.stringify(output.text);
     
 }
 
-console.log(await main("count the number of files in the directory of E:\\my_agent_adk\\src"));
+console.log(await main("count the number of files in the directory of E:\\my_agent_adk"));
