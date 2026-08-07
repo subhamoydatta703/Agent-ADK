@@ -2,7 +2,6 @@ import { Agent } from "./agent/Agent";
 import { GeminiProvider } from "./providers/GeminiProvider";
 import { countFile } from "./tools/FileTools";
 import { ToolRegistry } from "./tools/ToolRegistry";
-import path from "path";
 
 
 const llm = new GeminiProvider(process.env.GEMINI_API_KEY!);
