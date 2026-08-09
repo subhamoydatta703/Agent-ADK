@@ -1,12 +1,14 @@
 import { Agent } from "./agent/Agent";
 import { GeminiProvider } from "./providers/GeminiProvider";
-import { countFile } from "./tools/FileTools";
+import { countFile, createAndExecuteFile } from "./tools/FileTools";
 import { ToolRegistry } from "./tools/ToolRegistry";
 
 
 const llm = new GeminiProvider(process.env.GEMINI_API_KEY!);
 const toolRegistry = new ToolRegistry();
 toolRegistry.registerTool(countFile);
+toolRegistry.registerTool(createAndExecuteFile);
+
 const agent = new Agent(llm, toolRegistry);
 async function main(content: string){
     const output = await agent.run(content);
@@ -16,4 +18,4 @@ async function main(content: string){
     
 }
 
-console.log(await main("count the number of files in the directory of E:\\my_agent_adk"));
+console.log(await main("Create a file name hello.ts with the following code: console.log('Hey it\'s me Subhamoy...cool!!!')"));
