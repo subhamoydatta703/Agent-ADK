@@ -3,13 +3,14 @@ import { GeminiProvider } from "./providers/GeminiProvider";
 import { countFile, createAndExecuteFile } from "./tools/FileTools";
 import { ToolRegistry } from "./tools/ToolRegistry";
 import { gitStatus } from "./tools/GitTools";
-
+import { search } from "./tools/SearchTool";
 
 const llm = new GeminiProvider(process.env.GEMINI_API_KEY!);
 const toolRegistry = new ToolRegistry();
 toolRegistry.registerTool(countFile);
 toolRegistry.registerTool(createAndExecuteFile);
 toolRegistry.registerTool(gitStatus);
+toolRegistry.registerTool(search);
 
 const agent = new Agent(llm, toolRegistry);
 async function main(content: string){
@@ -23,4 +24,4 @@ const cleaned = output.text
     
 }
 
-console.log(await main("Show me the status of the git repository"));
+console.log(await main("Search for information about What is the current number of GitHub stars on the Bun repository right now?"));
