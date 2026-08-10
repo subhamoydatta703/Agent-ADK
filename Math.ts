@@ -10,6 +10,10 @@ export function multiply(a: number, b: number): number {
     return a * b;
 }
 
+export function absolute(a: number): number {
+  return Math.abs(a);
+}
+
 export function divide(a: number, b: number): number {
     if (b === 0) {
         throw new Error("Cannot divide by zero");

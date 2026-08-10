@@ -66,6 +66,33 @@ export const findFile: Tool = {
 
 
 
+const editFileSchema = z.object({
+    path: z
+        .string()
+        .min(1)
+        .describe("Path of the file to edit"),
+
+    target: z
+        .string()
+        .optional()
+        .describe(
+            "Existing text to use as the target. Not required when position is start or end."
+        ),
+
+    text: z
+        .string()
+        .describe("Text to insert or use as replacement"),
+
+    position: z
+        .enum(["start", "end", "before", "after", "replace"])
+        .describe(
+            "Where to place the text: start, end, before target, after target, or replace target."
+        )
+});
+
+
+
+
 const readMultipleFilesSchema = z.object({
     dir: z
         .string()
@@ -278,5 +305,104 @@ export const appendFileTool: Tool = {
         const newText = parsed.text;
         await Bun.write(filePath, existingText + "\n" + newText);
         return { output: "File appended successfully" };
+    }
+};
+
+
+export const editFile: Tool = {
+    name: "edit_file",
+
+    description:
+        "Edit an existing file by inserting text at the start/end, inserting before/after a target, or replacing a target.",
+
+    parameters: editFileSchema,
+
+    execute: async (
+        args: z.infer<typeof editFileSchema>
+    ) => {
+        const parsed = editFileSchema.parse(args);
+
+        const file = Bun.file(parsed.path);
+
+        // 1. Check if file exists
+        if (!(await file.exists())) {
+            throw new Error(
+                `File does not exist: ${parsed.path}`
+            );
+        }
+
+        // 2. Read existing file
+        const content = await file.text();
+
+        let updatedContent: string;
+
+        // 3. Insert at beginning
+        if (parsed.position === "start") {
+            updatedContent = parsed.text + content;
+        }
+
+        // 4. Insert at end
+        else if (parsed.position === "end") {
+            updatedContent = content + parsed.text;
+        }
+
+        // 5. All other operations require a target
+        else {
+            if (!parsed.target) {
+                throw new Error(
+                    `Target is required when position is "${parsed.position}".`
+                );
+            }
+
+            const targetIndex = content.indexOf(parsed.target);
+
+            // Target doesn't exist
+            if (targetIndex === -1) {
+                throw new Error(
+                    `Target text was not found in ${parsed.path}`
+                );
+            }
+
+            // Insert before target
+            if (parsed.position === "before") {
+                updatedContent =
+                    content.slice(0, targetIndex) +
+                    parsed.text +
+                    content.slice(targetIndex);
+            }
+
+            // Insert after target
+            else if (parsed.position === "after") {
+                const endOfTarget =
+                    targetIndex + parsed.target.length;
+
+                updatedContent =
+                    content.slice(0, endOfTarget) +
+                    parsed.text +
+                    content.slice(endOfTarget);
+            }
+
+            // Replace target
+            else {
+                updatedContent =
+                    content.slice(0, targetIndex) +
+                    parsed.text +
+                    content.slice(
+                        targetIndex + parsed.target.length
+                    );
+            }
+        }
+
+        // 6. Write updated content back to the same file
+        await Bun.write(
+            parsed.path,
+            updatedContent
+        );
+
+        return {
+            success: true,
+            message: "File edited successfully",
+            path: parsed.path
+        };
     }
 };

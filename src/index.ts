@@ -1,6 +1,6 @@
 import { Agent } from "./agent/Agent";
 import { GeminiProvider } from "./providers/GeminiProvider";
-import { countFile, findFile, appendFileTool, replaceFileContent } from "./tools/FileTools";
+import { countFile, findFile, appendFileTool, replaceFileContent, editFile } from "./tools/FileTools";
 import { ToolRegistry } from "./tools/ToolRegistry";
 
 const llm = new GeminiProvider(process.env.GOOGLE_GEMINI_API_KEY!);
@@ -14,6 +14,7 @@ toolRegistry.registerTool(countFile);
 toolRegistry.registerTool(findFile);
 toolRegistry.registerTool(replaceFileContent);
 toolRegistry.registerTool(appendFileTool);
+toolRegistry.registerTool(editFile);
 
 const agent = new Agent(llm, toolRegistry);
 async function main(content: string){
@@ -27,4 +28,4 @@ const cleaned = output.text
     
 }
 
-console.log(await main("Read the Math.ts file and add a function to it called power that takes two numbers as arguments and returns the first number raised to the power of the second number"));
+console.log(await main("Read the Math.ts file and add a function just before the divide function to it called absolute that takes one number as an argument and returns the absolute value of that number"));
