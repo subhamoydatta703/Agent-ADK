@@ -1,5 +1,5 @@
 import { type Message } from "./Message";
-import { type LLMProvider } from "./LLMProvider";
+import { type LLMProvider } from "../providers/LLMProvider";
 import type { ToolRegistry } from "../tools/ToolRegistry";
 
 export class Agent {
@@ -8,7 +8,7 @@ export class Agent {
     private messages: Message[] = [];
     private maxSteps: number;
 
-    constructor(llm: LLMProvider, registry: ToolRegistry, maxSteps: number = 10) {
+    constructor(llm: LLMProvider, registry: ToolRegistry, maxSteps: number = 30) {
         this.llm = llm;
         this.registry = registry;
         this.maxSteps = maxSteps;

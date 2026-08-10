@@ -1,6 +1,6 @@
 import { Agent } from "./agent/Agent";
 import { GeminiProvider } from "./providers/GeminiProvider";
-import { countFile, createAndExecuteFile } from "./tools/FileTools";
+import { countFile, createAndExecuteFile, readMultipleFiles, createAndWritePlan } from "./tools/FileTools";
 import { ToolRegistry } from "./tools/ToolRegistry";
 import { gitStatus } from "./tools/GitTools";
 import { search } from "./tools/SearchTool";
@@ -11,6 +11,8 @@ toolRegistry.registerTool(countFile);
 toolRegistry.registerTool(createAndExecuteFile);
 toolRegistry.registerTool(gitStatus);
 toolRegistry.registerTool(search);
+toolRegistry.registerTool(readMultipleFiles);
+toolRegistry.registerTool(createAndWritePlan);
 
 const agent = new Agent(llm, toolRegistry);
 async function main(content: string){
@@ -24,4 +26,4 @@ const cleaned = output.text
     
 }
 
-console.log(await main("Search for information about What is the current number of GitHub stars on the Bun repository right now?"));
+console.log(await main("Check the current git status"));

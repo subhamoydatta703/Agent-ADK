@@ -1,5 +1,5 @@
 import { type Message } from "./Message";
-import { type LLMProvider } from "./LLMProvider";
+import { type LLMProvider } from "../providers/LLMProvider";
 import { type Tool } from "../tools/ToolRegistry";
 import { type LLMResponse } from "../providers/LLMResponse";
 

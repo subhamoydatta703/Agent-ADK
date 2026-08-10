@@ -1,7 +1,7 @@
 import type { Message } from "../agent/Message";
-import type { LLMProvider } from "../agent/LLMProvider";
+import type { LLMProvider } from "../providers/LLMProvider";
 import { FunctionCallingConfigMode, GoogleGenAI, type Part } from "@google/genai";
-import type { LLMResponse } from "./LLMResponse";
+import type { LLMResponse } from "../providers/LLMResponse";
 import type { Tool } from "../tools/ToolRegistry";
 import * as z from "zod";
 
