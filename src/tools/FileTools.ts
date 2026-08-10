@@ -4,6 +4,8 @@ import { type Tool } from "./ToolRegistry";
 import { write } from "bun";
 import { cwd } from "process";
 import path, { join, resolve } from "path";
+// import { appendFile } from "node:fs/promises";
+import { replaceInFile } from "replace-in-file";
 
 const countFileSchema = z.object({
     path: z.string().describe("The path to the directory to count files in").min(1)
@@ -13,6 +15,55 @@ const createAndExecuteFileSchema = z.object({
     path: z.string().describe("The path to the file to create").min(1),
     code: z.string().describe("The code to write to the file").min(1)
 });
+
+const appendFileSchema = z.object({
+    path: z.string().describe("The path to the file to append to").min(1),
+    text: z.string().describe("The text to append to the file").min(1)
+});
+
+
+const findFileSchema = z.object({
+    name: z
+        .string()
+        .min(1)
+        .describe("Name or part of the file name to search for")
+});
+
+
+export const findFile: Tool = {
+    name: "find_file",
+
+    description:
+        "Find a single file by name and return its actual path.",
+
+    parameters: findFileSchema,
+
+    execute: async (args: z.infer<typeof findFileSchema>) => {
+        const { name } = findFileSchema.parse(args);
+
+        const paths = await getFilePaths(process.cwd());
+
+        const matches = paths.filter(path =>
+            path.toLowerCase().includes(name.toLowerCase())
+        );
+
+        if (matches.length === 0) {
+            throw new Error(`No file found matching: ${name}`);
+        }
+
+        if (matches.length > 1) {
+            return {
+                output: "Multiple files found",
+                files: matches
+            };
+        }
+
+        return {
+            path: matches[0]
+        };
+    }
+};
+
 
 
 const readMultipleFilesSchema = z.object({
@@ -33,7 +84,21 @@ const createAndWritePlanSchema = z.object({
 });
 
 
+const replaceFileContentSchema = z.object({
+    path: z
+        .string()
+        .min(1)
+        .describe("Path of the existing file to update"),
 
+    oldText: z
+        .string()
+        .min(1)
+        .describe("Exact text currently present in the file"),
+
+    newText: z
+        .string()
+        .describe("New text that should replace the old text")
+});
 
 
 
@@ -177,5 +242,41 @@ export const readMultipleFiles: Tool = {
         }
 
         return { files };
+    }
+};
+
+export const replaceFileContent: Tool = {
+    name: "update_file",
+    description: "Update a file with the given text",
+    parameters: replaceFileContentSchema,
+    execute: async (args: z.infer<typeof replaceFileContentSchema>) => {
+        const parsed = replaceFileContentSchema.parse(args);
+        const filePath = parsed.path;
+        const oldText = parsed.oldText;
+        const newText = parsed.newText;
+        const results = await replaceInFile({
+            files: filePath,
+            from: oldText,
+            to: newText
+        });
+        return {
+            output: "File updated successfully",
+            results
+        };
+    }
+};
+
+export const appendFileTool: Tool = {
+    name: "append_file",
+    description: "Append text to a file",
+    parameters: appendFileSchema,
+    execute: async (args: z.infer<typeof appendFileSchema>) => {
+        const parsed = appendFileSchema.parse(args);
+        const filePath = parsed.path;
+        const file = Bun.file(filePath);
+        const existingText = await file.text();
+        const newText = parsed.text;
+        await Bun.write(filePath, existingText + "\n" + newText);
+        return { output: "File appended successfully" };
     }
 };
