@@ -37,8 +37,21 @@ export class Agent {
             // 2. Execute tools & push tool turn with functionResponse
             for (const toolCall of response.toolcalls) {
                 const tool = this.registry.getTool(toolCall.name);
+
                 if (!tool) {
-                    throw new Error(`Tool ${toolCall.name} not found`);
+                    // throw new Error(`Tool ${toolCall.name} not found`);
+                    this.messages.push({
+                        role: "tool",
+                        parts: [
+                            {
+                                functionResponse: {
+                                    name: toolCall.name,
+                                    response: { result: `Tool ${toolCall.name} not found` }
+                                }
+                            } as any
+                        ]
+                    });
+                    continue;
                 }
 
                 const result = await tool.execute(toolCall.params || {});

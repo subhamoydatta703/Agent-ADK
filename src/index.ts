@@ -8,14 +8,14 @@ import { ToolRegistry } from "./tools/ToolRegistry";
 const llm = new GeminiProvider(process.env.GOOGLE_GEMINI_API_KEY!);
 const toolRegistry = new ToolRegistry();
 toolRegistry.registerTool(countFile);
-toolRegistry.registerTool(createAndExecuteFile);
-toolRegistry.registerTool(gitStatus);
-toolRegistry.registerTool(search);
-toolRegistry.registerTool(readMultipleFiles);
-toolRegistry.registerTool(createAndWritePlan);
-toolRegistry.registerTool(findFile);
-toolRegistry.registerTool(appendFileTool);
-toolRegistry.registerTool(editFile);
+// toolRegistry.registerTool(createAndExecuteFile);
+// toolRegistry.registerTool(gitStatus);
+// toolRegistry.registerTool(search);
+// toolRegistry.registerTool(readMultipleFiles);
+// toolRegistry.registerTool(createAndWritePlan);
+// toolRegistry.registerTool(findFile);
+// toolRegistry.registerTool(appendFileTool);
+// toolRegistry.registerTool(editFile);
 
 const agent = new Agent(llm, toolRegistry);
 async function main(content: string){

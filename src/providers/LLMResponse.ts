@@ -5,4 +5,8 @@ export interface LLMResponse {
     text: string;
     rawParts?: any[];
     toolcalls?: ToolCall[];
+     error?: {
+        type: "LLM_GENERATION_FAILED";
+        message: string;
+    };
 }
