@@ -7,11 +7,15 @@ import { createInterface } from "node:readline/promises";
 const executeSchema = z.object({
     command: z
         .string()
-        .describe("The executable name only, for example: git, bun, npm, mkdir"),
+        .describe(
+            "The actual executable name only, such as git, bun, node, npm, npx, tsc, or python. Do not use shell built-ins or aliases such as type, cat, dir, ls, cd, echo, or mkdir."
+        ),
 
     args: z
         .array(z.string())
-        .describe("Arguments for the executable, each argument as a separate string")
+        .describe(
+            "Arguments for the executable. Each argument must be a separate string."
+        )
         .default([]),
 });
 
@@ -21,13 +25,6 @@ const safeCommands: CommandPolicy = {
         "git",
         "bun",
         "bunx",
-        "mkdir",
-        "touch",
-        "echo",
-        "type",
-        "cat",
-        "dir",
-        "ls",
         "node",
         "npm",
         "npx",
@@ -35,7 +32,6 @@ const safeCommands: CommandPolicy = {
         "python",
     ]
 };
-
 
 
 // validate commands
@@ -74,7 +70,7 @@ async function askForConfirmation(command: string) {
 export const executeTerminalCommand: Tool = {
     name: "execute_terminal_command",
     description:
-    "Execute a terminal command. The command field must contain only the executable name. Put all command arguments separately in the args array. Example: { command: 'git', args: ['add', 'src/index.ts'] }",
+    "Execute an executable directly. The command field must contain only the actual executable name, not a shell command or shell builtin. Put every argument separately in args. Example: { command: 'git', args: ['add', 'src/index.ts'] }",
     parameters: executeSchema,
     execute: async (args: z.infer<typeof executeSchema>) => {
         // console.log("Args:", args);

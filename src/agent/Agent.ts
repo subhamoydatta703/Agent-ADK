@@ -25,6 +25,8 @@ export class Agent {
 
             if (!response.toolcalls || response.toolcalls.length === 0) {
                 this.messages.push({ role: "assistant", content: response.text });
+                console.log("Assistant: ", response.text);
+                
                 return response;
             }
 
@@ -55,6 +57,9 @@ export class Agent {
                 }
 
                 const result = await tool.execute(toolCall.params || {});
+
+                // console.log("Tool result: \n", result);
+                
 
                 this.messages.push({
                     role: "tool",

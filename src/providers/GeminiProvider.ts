@@ -59,6 +59,8 @@ export class GeminiProvider implements LLMProvider {
 
             const candidate = response.candidates?.[0];
             const functionCalls = response.functionCalls || [];
+            ;
+            
 
             return {
                 role: "assistant",
