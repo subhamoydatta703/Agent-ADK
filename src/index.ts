@@ -11,10 +11,10 @@ const toolRegistry = new ToolRegistry();
 toolRegistry.registerTool(countFile);
 // toolRegistry.registerTool(createAndExecuteFile);
 toolRegistry.registerTool(gitStatus);
-// toolRegistry.registerTool(search);
+toolRegistry.registerTool(search);
 toolRegistry.registerTool(readMultipleFiles);
 // toolRegistry.registerTool(createAndWritePlan);
-// toolRegistry.registerTool(findFile);
+toolRegistry.registerTool(findFile);
 // toolRegistry.registerTool(appendFileTool);
 // toolRegistry.registerTool(editFile);
 toolRegistry.registerTool(executeTerminalCommand);	
@@ -46,4 +46,4 @@ const cleaned = output.text
 // 	"origin": "extHost1"
 // }]
 
-console.log(await main("Check the git status and read the files in the commit or git diff or status and give me a perfect commit message"))
+console.log(await main("Check the git status and execute git commands to add and commit changes along with a commit message"))
