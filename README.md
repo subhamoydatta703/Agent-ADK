@@ -72,7 +72,7 @@ the full set implemented includes:
 - `create_and_write_plan` — persist a plan to a new file
 - `git_status` — run git commands
 - `execute_terminal_command` — execute a command in the terminal
-    - Note: The `execute_terminal_command` tool is now protected with a safety policy (safe commands list: git, bun, bunx, node, npm, npx, tsc, python) and includes user confirmation for potentially unsafe commands.
+    - Note: The `execute_terminal_command` tool now includes a validation check against a `safeCommands` list (`git`, `bun`, `bunx`, `node`, `npm`, `npx`, `tsc`, `python`). Commands not in this list require user confirmation via a prompt.
 - `search` — search the web via Tavily
 
 ## Tech stack
