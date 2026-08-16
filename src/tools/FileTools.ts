@@ -398,8 +398,13 @@ export const listFiles: Tool = {
 
     description:
         "List file paths inside a directory recursively without reading their contents. " +
-        "USE THIS when the user wants to know which files exist. " +
-        "Examples: 'Show me all files in src' or 'List all TypeScript files'. " +
+        "USE THIS for any task that needs to know which files exist in a directory — " +
+        "including simple one-off checks like 'what's in docs/' or 'find files in src'. " +
+        "This is always the correct tool for listing. " +
+        "DO NOT write and execute a script (Python, Node, shell, or otherwise) to list " +
+        "a directory — that is slower and creates unnecessary files. " +
+        "list_files or read_directory are always preferred over create_and_execute_file " +
+        "or execute_command for directory inspection. " +
         "DO NOT use this when the user wants file contents. " +
         "Use read_file or read_directory when content is needed.",
 
@@ -481,14 +486,19 @@ export const createFile: Tool = {
 };
 
 
-// Create a new file and immediately execute it.
+// Create a new file and immediately execute it, capturing real output.
 export const createAndExecuteFile: Tool = {
     name: "create_and_execute_file",
 
     description:
-        "Create a NEW file containing the provided code and immediately execute it. " +
-        "USE THIS when the user explicitly wants to create and run a new standalone file. " +
-        "Example: 'Create hello.ts and run it'. " +
+        "Create a NEW standalone script file and immediately execute it, capturing its " +
+        "stdout, stderr, and exit code. " +
+        "USE THIS only when the user explicitly wants a script created and run as part " +
+        "of the deliverable (e.g. 'write and run a build script'). " +
+        "DO NOT use this to inspect, list, or read files or directories — " +
+        "use list_files, find_file, read_file, or read_directory for that; writing a " +
+        "throwaway script to do what those tools already do is never correct, and this " +
+        "tool will reject scripts that only list/inspect files or directories. " +
         "DO NOT use this to modify an existing file. " +
         "DO NOT use this when the user only wants to create a file; use create_file.",
 
@@ -500,29 +510,67 @@ export const createAndExecuteFile: Tool = {
         const parsed =
             createAndExecuteFileSchema.parse(args);
 
+        // Reject scripts whose only purpose is listing/inspecting files or
+        // directories — that's what list_files / read_directory are for.
+        const inspectionSignals =
+            /os\.listdir|os\.walk|glob\.glob|pathlib\.Path\([^)]*\)\.iterdir|fs\.readdirSync|fs\.readdir\(|fs\/promises['"]\).*readdir/i;
+
+        if (inspectionSignals.test(parsed.code)) {
+            return {
+                success: false,
+                status: "rejected",
+                path: parsed.path,
+                error:
+                    "This script only lists or inspects files/directories, which " +
+                    "list_files or read_directory already do. No file was created " +
+                    "and nothing was executed — call list_files or read_directory instead.",
+            };
+        }
+
         await write(
             parsed.path,
             parsed.code
         );
 
-        Bun.spawn([
-            "cmd.exe",
-            "/c",
-            "start",
-            "cmd.exe",
-            "/k",
-            "bun",
-            "run",
-            parsed.path
-        ]);
+        try {
+            const proc = Bun.spawn(
+                ["bun", "run", parsed.path],
+                {
+                    stdout: "pipe",
+                    stderr: "pipe",
+                }
+            );
 
-        return {
-            output:
-                "File created and executed successfully"
-        };
+            const stdout =
+                await new Response(proc.stdout).text();
+
+            const stderr =
+                await new Response(proc.stderr).text();
+
+            const exitCode =
+                await proc.exited;
+
+            return {
+                success: exitCode === 0,
+                path: parsed.path,
+                exitCode,
+                stdout,
+                stderr,
+            };
+        } catch (error) {
+            return {
+                success: false,
+                path: parsed.path,
+                exitCode: null,
+                stdout: "",
+                stderr:
+                    error instanceof Error
+                        ? error.message
+                        : String(error),
+            };
+        }
     }
 };
-
 
 // Append content strictly to the end of an existing file.
 export const appendFileTool: Tool = {
@@ -555,16 +603,22 @@ export const appendFileTool: Tool = {
         const existingText =
             await file.text();
 
-        await Bun.write(
-            parsed.path,
+        const updatedContent =
             existingText +
             "\n" +
-            parsed.text
+            parsed.text;
+
+        await Bun.write(
+            parsed.path,
+            updatedContent
         );
 
         return {
+            success: true,
             output:
-                "File appended successfully"
+                "File appended successfully",
+            path: parsed.path,
+            currentFileContent: updatedContent
         };
     }
 };
@@ -632,9 +686,12 @@ export const editFile: Tool = {
                 content.indexOf(parsed.target);
 
             if (targetIndex === -1) {
-                throw new Error(
-                    `Target text was not found in ${parsed.path}`
-                );
+                return {
+                    success: false,
+                    error: "TARGET_NOT_FOUND",
+                    path: parsed.path,
+                    target: parsed.target,
+                };
             }
 
             if (parsed.position === "before") {
@@ -688,7 +745,10 @@ export const editFile: Tool = {
             success: true,
             message:
                 "File edited successfully",
-            path: parsed.path
+            path: parsed.path,
+            // Ground-truth current content — trust this over any earlier
+            // assumption about the file's state.
+            currentFileContent: updatedContent
         };
     }
 };

@@ -54,7 +54,8 @@ export class GeminiProvider implements LLMProvider {
                         }
                     },
                     tools: [{ functionDeclarations }]
-                }
+                },
+                
             });
 
             const candidate = response.candidates?.[0];
