@@ -4,4 +4,5 @@ import type { LLMResponse } from "../providers/LLMResponse";
 
 export interface LLMProvider {
     generate(messages: Message[], tools: Tool[]): Promise<LLMResponse>;
+    // stream?(messages: Message[], tools: Tool[]): AsyncGenerator<string, void, unknown>;
 }

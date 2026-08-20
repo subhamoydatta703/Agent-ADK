@@ -22,19 +22,23 @@ export class Agent {
 
         while (stepCount < this.maxSteps) {
 
-            for await (const text of streamGemini(content)) {
-                process.stdout.write(text);
-            }
-            // console.log("explain");
+            
             stepCount++;
             const response = await this.llm.generate(this.messages, tools);
 
+            // console.log("Response: ", response);
+            
             if (!response.toolcalls || response.toolcalls.length === 0) {
                 this.messages.push({ role: "assistant", content: response.text });
                 // console.log("Assistant: ", response.text);
 
                 return response;
             }
+
+            // if(response.role==="assistant" || response.role==="model"){
+            //     console.log("Assistant: ", response.text);
+            //     process.stdout.write(response.text);
+            // }
 
             // 1. Push model turn with exact returned parts (preserves functionCall & thought_signature)
             this.messages.push({
@@ -71,7 +75,7 @@ export class Agent {
                 } catch (error) {
                     result = `Error executing tool: ${error instanceof Error ? error.message : String(error)}`;
                 }
-                // console.log("Tool result: \n", result);
+                 // console.log("Tool result: \n", result);
 
 
                 this.messages.push({

@@ -3,6 +3,7 @@ import { readdir } from "fs/promises";
 import { type Tool } from "./ToolRegistry";
 import { write } from "bun";
 import { join } from "path";
+import { glob } from "node:fs/promises";
 
 
 // Count files directly inside a directory.
@@ -191,6 +192,10 @@ const editFileSchema = z.object({
             "'replace' replaces the target."
         )
 });
+
+
+
+const getProjectTreeSchema = z.object({});
 
 
 // Find one specific file in the codebase.
@@ -452,6 +457,12 @@ export const countFile: Tool = {
         };
     }
 };
+
+
+
+const deleteFileSchema = z.object({
+    path: z.string().describe("The path to the file to delete").min(1)
+});
 
 
 // Create a new file without executing it.
@@ -806,6 +817,7 @@ async function getFilePaths(
         if (entry.isFile()) {
             paths.push(fullPath);
         }
+        
 
         if (entry.isDirectory()) {
             const nestedPaths =
@@ -819,3 +831,70 @@ async function getFilePaths(
 
     return paths;
 }
+
+
+
+
+
+export const deleteFile: Tool = {
+    name: "delete_file",
+
+    description:
+        "Delete a file from the filesystem. " +
+        "USE THIS when the agent needs to remove a file with user permission. " +
+        "Example: 'Delete src/utils/Math.ts'. " +
+        "DO NOT use this for normal source-code files; use create_file." +
+        "Do NOT delete files without explicit user permission or mention by the user.",
+
+    parameters: deleteFileSchema,
+
+    execute: async (
+        args: z.infer<typeof deleteFileSchema>
+    ) => {
+        const parsed =
+            deleteFileSchema.parse(args);
+
+        const path = parsed.path;
+        const file = Bun.file(path);
+
+        await file.delete();
+
+        return {
+            output:
+                "File deleted successfully"
+        };
+    }
+};
+
+
+
+export const getAllFiles = async () => {
+    const allFiles = await Array.fromAsync(
+        glob("**/*", {
+            exclude: ["node_modules/**", "dist/**", ".git/**", "build/**", ".next/**", "coverage/**", "*.log"],
+        })
+    );
+
+    return {
+        total: allFiles.length,
+        files: allFiles.slice(0, 300),
+        truncated: allFiles.length > 300,
+    };
+};
+
+
+
+export const getProjectTree: Tool = {
+    name: "get_project_tree",
+    description:
+        "Return the project's file listing (excluding node_modules, dist, build, .git, " +
+        "and similar generated directories). USE THIS FIRST whenever a task does not " +
+        "specify a file path — call this before find_file, list_files, or read_directory " +
+        "to see what actually exists. Do not guess directory names or write a script to " +
+        "discover files (os.walk, listdir, readdirSync, etc.).",
+    parameters: getProjectTreeSchema,
+    execute: async () => {
+        const { total, files, truncated } = await getAllFiles();
+        return { total, files, truncated };
+    },
+};

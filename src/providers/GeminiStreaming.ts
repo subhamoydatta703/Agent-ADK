@@ -1,49 +1,68 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import dotenv from "dotenv";
+import { type Message } from "../agent/Message";
+import { type Tool } from "../tools/ToolRegistry";
+
 dotenv.config();
 
 const apiKey = process.env.GEMINI_STREAMING_API_KEY;
+
 if (!apiKey) {
     throw new Error("API key for Gemini Streaming is not set");
 }
 
 const ai = new GoogleGenAI({
-  apiKey: apiKey,
+    apiKey,
 });
 
 export interface GeminiConfig {
-  temperature?: number;
-  maxOutputTokens?: number;
+    maxOutputTokens?: number;
+    thinkingLevel?: ThinkingLevel;
 }
 
-/**
- * Streams content from Gemini.
- * @param content - The prompt or input content to send to Gemini.
- * @param config - Optional configuration for Gemini generation.
- * @returns An async generator yielding chunks of text from the stream.
- */
-export async function* streamGemini(content: string, config: GeminiConfig = {}) {
-    // Already validated key initialization
-  let stream;
-  try {
-    stream = await ai.models.generateContentStream({
-      model: "gemini-3.5-flash",
-      contents: content,
-      config: {
-        temperature: config.temperature,
-        maxOutputTokens: config.maxOutputTokens,
-      }
-    });
-  } catch (error) {
-    console.error("Error generating content stream:", error);
-    throw new Error(`Failed to stream from Gemini: ${error instanceof Error ? error.message : String(error)}`);
-  }
+export async function* streamGemini(
+    messages: Message[],
+    tools: Tool[],
+    config: GeminiConfig = {}
+): AsyncGenerator<string, void, unknown> {
+    let stream;
 
-  for await (const chunk of stream) {
-    const text = chunk.text;
+    try {
+        // Convert messages to Gemini format if necessary. 
+        // Assuming current simple content passing for now based on previous implementation
+        const content = messages.map(m => m.content).join("\n");
+        
+        stream = await ai.models.generateContentStream({
+            model: "gemini-3.5-flash",
+            contents: content,
+            config: {
+                maxOutputTokens: config.maxOutputTokens,
+                thinkingConfig: {
+                    thinkingLevel:
+                        config.thinkingLevel ?? ThinkingLevel.LOW,
+                },
+                tools: tools.length > 0 ? [{ functionDeclarations: tools.map(t => ({
+                    name: t.name,
+                    description: t.description,
+                    parameters: t.parameters as any
+                })) }] : undefined
+            },
+        });
+    } catch (error) {
+        console.error("Error generating content stream:", error);
 
-    if (text) {
-      yield text;
+        throw new Error(
+            `Failed to stream from Gemini: ${
+                error instanceof Error ? error.message : String(error)
+            }`
+        );
     }
-  }
+
+    for await (const chunk of stream) {
+        const text = chunk.text;
+
+        if (text) {
+            yield text;
+        }
+    }
 }
