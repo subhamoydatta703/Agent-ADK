@@ -4,6 +4,7 @@ import type { ToolRegistry } from "../tools/ToolRegistry";
 import { streamGemini } from "../providers/GeminiStreaming";
 import { type GuardrailContext } from "../guardrails/types/GuardrailContext";
 import { InputGuardrails } from "../guardrails/input/InputGuardrails";
+import { OutputGuardrails } from "../guardrails/output/OutputGuardrails";
 
 export class Agent {
     private llm: LLMProvider;
@@ -12,6 +13,7 @@ export class Agent {
     private maxSteps: number;
     private name: string;
     private inputGuardrails: InputGuardrails;
+    private outputGuardrails: OutputGuardrails;
 
     constructor(llm: LLMProvider, registry: ToolRegistry, maxSteps: number = 60, name: string = "Agent") {
         this.llm = llm;
@@ -19,6 +21,7 @@ export class Agent {
         this.maxSteps = maxSteps;
         this.name = name;
         this.inputGuardrails = new InputGuardrails();
+        this.outputGuardrails = new OutputGuardrails();
     }
 
     async run(content: string) {
@@ -49,26 +52,27 @@ export class Agent {
             
             if (!response.toolcalls || response.toolcalls.length === 0) {
                 this.messages.push({ role: "assistant", content: response.text });
-                // console.log("Assistant: ", response.text);
-
-                return response;
+                
+                const finalResponse = await this.outputGuardrails.outputValidation(response);
+                
+                
+                
+                
+                if(finalResponse.isSafe){
+                    return response;
+                }
+                return { text: "Sorry, I cannot process your request.",
+                    reason: finalResponse.reason 
+                };
             }
 
-            // if(response.role==="assistant" || response.role==="model"){
-            //     console.log("Assistant: ", response.text);
-            //     process.stdout.write(response.text);
-            // }
+                
 
             // 1. Push model turn with exact returned parts (preserves functionCall & thought_signature)
             this.messages.push({
                 role: "model",
                 parts: response.rawParts
             });
-            // console.log("Response: ", this.messages[this.messages.length - 1]?.parts?.filter(part => part.functionCall),"\n\n");
-            // console.dir(response.rawParts, {
-            //     depth: null,
-            //     colors: true,
-            // });
             // 2. Execute tools & push tool turn with functionResponse
             for (const toolCall of response.toolcalls) {
                 const tool = this.registry.getTool(toolCall.name);
@@ -114,3 +118,4 @@ export class Agent {
         throw new Error(`Agent exceeded maximum execution step limit of ${this.maxSteps}.`);
     }
 }
+
