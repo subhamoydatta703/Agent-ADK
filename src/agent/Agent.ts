@@ -2,20 +2,39 @@ import { type Message } from "./Message";
 import { type LLMProvider } from "../providers/LLMProvider";
 import type { ToolRegistry } from "../tools/ToolRegistry";
 import { streamGemini } from "../providers/GeminiStreaming";
+import { type GuardrailContext } from "../guardrails/types/GuardrailContext";
+import { InputGuardrails } from "../guardrails/input/InputGuardrails";
 
 export class Agent {
     private llm: LLMProvider;
     private registry: ToolRegistry;
     private messages: Message[] = [];
     private maxSteps: number;
+    private name: string;
+    private inputGuardrails: InputGuardrails;
 
-    constructor(llm: LLMProvider, registry: ToolRegistry, maxSteps: number = 60) {
+    constructor(llm: LLMProvider, registry: ToolRegistry, maxSteps: number = 60, name: string = "Agent") {
         this.llm = llm;
         this.registry = registry;
         this.maxSteps = maxSteps;
+        this.name = name;
+        this.inputGuardrails = new InputGuardrails();
     }
 
     async run(content: string) {
+        const context: GuardrailContext = {
+            agentName: this.name,
+            input: content,
+            timestamp: new Date(),
+        };
+
+        const inputValidation = await this.inputGuardrails.validate(context);
+        // if (!inputValidation.isSafe) {
+        //     throw new Error(inputValidation.reason);
+        // }
+
+
+
         this.messages.push({ role: "user", content: content });
         const tools = this.registry.getAllTools();
         let stepCount = 0;
