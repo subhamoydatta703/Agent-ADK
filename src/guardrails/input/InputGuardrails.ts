@@ -1,7 +1,7 @@
 import type { GuardrailResult } from "../types/GuardrailResult";
 import type { GuardrailContext } from "../types/GuardrailContext";
-import { SecretScanner } from "./SecretScanner";
-import { buildInputGuardrailPrompt } from "./GuardrailPrompt";
+import { SecretScanner } from "../types/SecretScanner";
+import { buildInputGuardrailPrompt } from "./InputGuardrailPrompt";
 import { GoogleGenAI } from "@google/genai";
 
 export class InputGuardrails {

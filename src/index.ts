@@ -34,28 +34,10 @@ async function main(content: string){
 const cleaned = output!.text.replace(/^\s*\*\s*/gm, "")
   .replace(/\*\*/g, "")
   .replace(/`/g, "");
-    return "AI AGENT: \n\n" + cleaned;
+    return "\nAI AGENT: \n" + cleaned;
     
 }
 
-
-const prompt = `Implement the following tasks:
-
-1. Read and fully understand docs\\gemini_streaming_fix_plan.md before making any changes.
-2. Implement the plan strictly and sequentially, one step at a time.
-3. Before modifying ANY existing file, read its current contents using the appropriate file-reading tool.
-4. Never assume or remember the current contents of a file. Never construct an edit target from the plan, previous context, or memory.
-5. When using edit_file with "before", "after", or "replace", the target MUST be copied exactly from the latest read_file result for that file.
-6. After modifying a file, verify that the change was applied correctly before proceeding to the next step.
-7. Use the required tools to test the implementation.
-8. If a test or implementation step fails, inspect the actual current state of the relevant files, identify the cause, fix it, and retest before continuing.
-9. Do not hallucinate file contents, tool results, test results, or implementation details.
-10. Do not skip any step from the plan.
-11. Do not modify files that are not required by the plan.
-12. Do not make unrelated refactors, improvements, formatting changes, or architectural changes.
-13. Keep the implementation limited to the files explicitly required by the plan, unless a dependency makes another file strictly necessary.
-14. After completing the implementation, update docs\\gemini_streaming_fix_plan.md with the actual changes made and the implementation/test status.
-15. Do not claim a step is complete unless it was actually implemented and verified.`
 
 
 const instruction =`If an edit_file operation fails because the target text was not found:
@@ -88,51 +70,7 @@ Only use execute_command/python for tasks that genuinely require running code
 
 // console.log(await main("Hi"))
 
-const user_prompt =`Implement streaming_improvement_plan.md exactly as specified.
 
-### Instructions
-
-1. **Read the entire streaming_improvement_plan.md file first** before making any changes.
-2. Treat the contents of streaming_improvement_plan.md as the **single source of truth** for this task.
-3. Implement every requirement in the file **step by step**, following the specified order whenever an order is provided.
-4. **Do not hallucinate or invent**:
-
-   * requirements
-   * APIs
-   * functions
-   * files
-   * configurations
-   * dependencies
-   * behavior not explicitly required by the plan
-5. Before implementing each step, inspect the **existing relevant code** to understand its current structure and avoid unnecessary changes.
-6. Modify **only the files explicitly mentioned in streaming_improvement_plan.md** or files that the plan explicitly requires to be created.
-7. **Do not modify, refactor, rename, delete, or create unrelated files or code.**
-8. Do not make "helpful" changes outside the scope of the plan, even if you notice potential improvements.
-9. Preserve all existing functionality that is not explicitly changed by the plan.
-10. Follow the existing project's coding style, architecture, naming conventions, and patterns wherever the plan does not specify an alternative.
-11. If a requirement is ambiguous, missing information, or technically impossible based on the existing codebase, **stop and report the issue instead of guessing**.
-12. After implementing each step, verify that the implementation matches the corresponding requirement before proceeding to the next step.
-13. At the end, review the complete implementation against streaming_improvement_plan.md and confirm that:
-
-    * every requirement was implemented
-    * no requirements were skipped
-    * no unrelated files were changed
-    * no unnecessary code was added
-    * no existing functionality was unintentionally broken
-
-### Strict Scope Rule
-
-**streaming_improvement_plan.md is the only authority for what should be implemented. Do not go beyond its scope.**
-
-If the plan does not explicitly require a change, **do not make that change**.
-
-Before finishing, provide a concise summary of:
-
-* what was implemented
-* files changed
-* any issues or assumptions that prevented exact implementation
-* verification/tests performed
-`
 
 // console.log(await main("Implement streaming_improvement_plan.md file perfectly without any halluinations. Implement the file content in the codebase properly, and step by step. DO not update other codebases or other files that are not mentioned in the streaming_improvement_plan.md file."+SYSTEM_PROMPT))
 
@@ -150,3 +88,5 @@ Before finishing, provide a concise summary of:
 
 // console.log(await main("Check the OutputGuardrails.ts, GuardrailPrompt.ts, GuardrailResult.ts and Agent.ts files and tell me in that why the isSafe becomes undefined when i give the final response to the outputGuardrails.ts when tool.length==0"+SYSTEM_PROMPT));
 console.log(await main("Check the git status and make a make a git push to the main branch with a commit message"+SYSTEM_PROMPT));
+// console.log(await main("Check the git status"+SYSTEM_PROMPT));
+// console.log(await main("Check the guardrails folder and sub folder and its file structure, and  tell me does this structure is ok or not or should i change anything in the structure"+SYSTEM_PROMPT));

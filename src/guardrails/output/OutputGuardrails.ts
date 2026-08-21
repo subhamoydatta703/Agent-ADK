@@ -1,7 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
-import { buildOutputGuardrailPrompt} from "./GuardrailPrompt";
+import { buildOutputGuardrailPrompt} from "./OutputGuardrailPrompt";
 import type { LLMResponse } from "../../providers/LLMResponse";
 import type { GuardrailResult } from "../types/GuardrailResult";
+import { SecretScanner } from "../types/SecretScanner";
 
 export class OutputGuardrails {
     private aiGuard: GoogleGenAI;
@@ -12,6 +13,13 @@ export class OutputGuardrails {
     async outputValidation(response: LLMResponse) {
         if(!this.aiGuard) {
             throw new Error("AI Guard is not initialized");
+        }
+
+        if (SecretScanner.containsSecret(response.text)) {
+            return {
+                isSafe: false,
+                reason: "Potential secret detected",
+            };
         }
         const llmResult = await this.outputGuardrail(response);
         return llmResult;
