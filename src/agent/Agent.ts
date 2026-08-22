@@ -22,7 +22,27 @@ export class Agent {
         this.name = name;
         this.inputGuardrails = new InputGuardrails();
         this.outputGuardrails = new OutputGuardrails();
+    }    private async reflectOnPlan(response: any): Promise<{ isGood: boolean; feedback?: string }> {
+        const reflectionPrompt = `
+You have proposed the following plan (tool calls):
+${JSON.stringify(response.toolcalls, null, 2)}
+
+Review this plan against the goal and previous steps. 
+Is this plan necessary, correct, and optimal? 
+If there are any issues (e.g., redundant tools, hallucinated parameters, or a better way to achieve the goal), please provide feedback.
+Reply with JSON: { "isGood": boolean, "feedback": string }
+`;
+
+        const reflectionResponse = await this.llm.generate([...this.messages, { role: "assistant", content: response.text }, { role: "user", content: reflectionPrompt }], []);
+        
+        try {
+            const result = JSON.parse(reflectionResponse.text);
+            return { isGood: result.isGood, feedback: result.feedback };
+        } catch (e) {
+            return { isGood: true }; // Default to proceed if reflection fails
+        }
     }
+
 
     async run(content: string) {
         const context: GuardrailContext = {
@@ -58,6 +78,7 @@ export class Agent {
                 
                 
                 
+                
                 if(finalResponse.isSafe){
                     return response;
                 }
@@ -68,11 +89,24 @@ export class Agent {
 
                 
 
+            // Reflect on plan
+            if (response.toolcalls && response.toolcalls.length > 0) {
+                const reflection = await this.reflectOnPlan(response);
+                if (!reflection.isGood) {
+                    this.messages.push({
+                        role: "assistant",
+                        content: `Reflection on proposed plan: ${reflection.feedback}. I should reconsider.`
+                    });
+                    continue; // Skip execution and re-generate
+                }
+            }
+
             // 1. Push model turn with exact returned parts (preserves functionCall & thought_signature)
             this.messages.push({
                 role: "model",
                 parts: response.rawParts
             });
+
             // 2. Execute tools & push tool turn with functionResponse
             for (const toolCall of response.toolcalls) {
                 const tool = this.registry.getTool(toolCall.name);

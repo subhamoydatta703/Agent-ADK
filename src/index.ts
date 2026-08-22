@@ -19,7 +19,7 @@ toolRegistry.registerTool(gitStatus);
 // toolRegistry.registerTool(appendFileTool);
 // toolRegistry.registerTool(editFile);
 toolRegistry.registerTool(codingContextTool);
-// toolRegistry.registerTool(codeTool)
+toolRegistry.registerTool(codeTool)
 toolRegistry.registerTool(executeCommand)
 // toolRegistry.registerTool(createFile)
 // toolRegistry.registerTool(executeTerminalCommand);
@@ -48,7 +48,7 @@ const instruction =`If an edit_file operation fails because the target text was 
 5. Retry the edit only after verifying the target exists.`
 
 const   SYSTEM_PROMPT =`For listing, finding, or reading files or directories, ALWAYS use list_files,
-find_file, read_file, read_multiple_files, or read_directory. NEVER write and
+find_file, read_file, read_multiple_files, or read_directory. Whenever user mentioned to create a plan or make a plan then always create a file with a file name related to the plan in the docs/ folder. NEVER write and
 execute a script (Python, Node, or otherwise) to accomplish something one of
 these tools already does — that wastes steps and creates unnecessary files.
 Only use execute_command/python for tasks that genuinely require running code
@@ -90,3 +90,8 @@ Only use execute_command/python for tasks that genuinely require running code
 console.log(await main("Check the git status and make a make a git push to the main branch with a commit message"+SYSTEM_PROMPT));
 // console.log(await main("Check the git status"+SYSTEM_PROMPT));
 // console.log(await main("Check the guardrails folder and sub folder and its file structure, and  tell me does this structure is ok or not or should i change anything in the structure"+SYSTEM_PROMPT));
+
+// console.log(await main(SYSTEM_PROMPT+"Check each and every files of the codebase and create a detailed plan in docs folder about how to improve the codebase, add new features for the agent, and make it more secure and efficient. DO NOT HALLUCINATE AND DO NOT MAKE ANY MISTAKE."));
+
+// console.log(await main(SYSTEM_PROMPT+"Read the codebase of Agent.ts file and Implement a \"Chain of Thought\" reflection mechanism within the `Agent.run` loop inside Agent.ts file to allow the agent to evaluate its own plan before executing tools. DO NOT hallucinate and do not make any mistake."));
+
