@@ -5,6 +5,7 @@ import { gitStatus } from "./tools/GitTools";
 import { executeCommand } from "./tools/executeTools";
 import { ToolRegistry } from "./tools/ToolRegistry";
 import { sandboxManager } from "./tools/ExecutionManager";
+import { getProjectTree } from "./tools/FileTools";
 
 const llm = new GeminiProvider(process.env.GOOGLE_GEMINI_API_KEY!);
 const toolRegistry = new ToolRegistry();
@@ -12,6 +13,7 @@ toolRegistry.registerTool(gitStatus);
 toolRegistry.registerTool(codingContextTool);
 toolRegistry.registerTool(codeTool);
 toolRegistry.registerTool(executeCommand);
+toolRegistry.registerTool(getProjectTree)
 
 // The execute_command tool and the Agent share one ExecutionManager so the
 // Docker sandbox lifecycle is owned by the Agent: it starts on first use and is
@@ -21,7 +23,7 @@ const agent = new Agent(llm, toolRegistry, 60, "Agent", sandboxManager);
 
 async function main(content: string) {
     const output = await agent.run(content);
-    const cleaned = output!.text.replace(/^\s*\*\s*/gm, "")
+    const cleaned = output!.text?.replace(/^\s*\*\s*/gm, "")
         .replace(/\*\*/g, "")
         .replace(/`/g, "");
     return "\nAI AGENT: \n" + cleaned;
@@ -35,6 +37,6 @@ Only use execute_command/python for tasks that genuinely require running code
 (builds, tests, computations) — not for file inspection.
 `;
 
-const userQuery = process.argv[2] ?? "Check the Git status and do a git push to the main branch with a proper commit message.";
+const userQuery = process.argv[2] ?? "Check the Git status and make a git push command with a proper commit message";
 
 console.log(await main(SYSTEM_PROMPT + "\n" + userQuery));

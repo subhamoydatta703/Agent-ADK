@@ -36,7 +36,7 @@ If there are any issues (e.g., redundant tools, hallucinated parameters, or a be
 Reply with JSON: { "isGood": boolean, "feedback": string }
 `;
 
-        const reflectionResponse = await this.llm.generate([...this.messages, { role: "assistant", content: response.text }, { role: "user", content: reflectionPrompt }], []);
+        const reflectionResponse = await this.llm.generate([...this.messages, { role: "assistant", content: response.text || "" }, { role: "user", content: reflectionPrompt }], []);
         
         try {
             const result = JSON.parse(reflectionResponse.text);
@@ -74,10 +74,11 @@ Reply with JSON: { "isGood": boolean, "feedback": string }
                 if (!response.toolcalls || response.toolcalls.length === 0) {
                     this.messages.push({ role: "assistant", content: response.text });
 
-                    console.log("Response:\n", response);
-                    console.log("\n--------------------------\n");
-
-                    return response;
+                    const finalResponse = await this.outputGuardrails.outputValidation(response);
+                    if (finalResponse.isSafe) {
+                        return response;
+                    }
+                    return { reason: finalResponse.reason, text: finalResponse.text };
                 }
 
                 // Reflect on plan
