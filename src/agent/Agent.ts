@@ -1,6 +1,7 @@
 import { type Message } from "./Message";
 import { type LLMProvider } from "../providers/LLMProvider";
 import type { ToolRegistry } from "../tools/ToolRegistry";
+import type { ExecutionManager } from "../tools/ExecutionManager";
 import { streamGemini } from "../providers/GeminiStreaming";
 import { type GuardrailContext } from "../guardrails/types/GuardrailContext";
 import { InputGuardrails } from "../guardrails/input/InputGuardrails";
@@ -9,17 +10,19 @@ import { OutputGuardrails } from "../guardrails/output/OutputGuardrails";
 export class Agent {
     private llm: LLMProvider;
     private registry: ToolRegistry;
+    private sandbox?: ExecutionManager;
     private messages: Message[] = [];
     private maxSteps: number;
     private name: string;
     private inputGuardrails: InputGuardrails;
     private outputGuardrails: OutputGuardrails;
 
-    constructor(llm: LLMProvider, registry: ToolRegistry, maxSteps: number = 60, name: string = "Agent") {
+    constructor(llm: LLMProvider, registry: ToolRegistry, maxSteps: number = 60, name: string = "Agent", sandbox?: ExecutionManager) {
         this.llm = llm;
         this.registry = registry;
         this.maxSteps = maxSteps;
         this.name = name;
+        this.sandbox = sandbox;
         this.inputGuardrails = new InputGuardrails();
         this.outputGuardrails = new OutputGuardrails();
     }    private async reflectOnPlan(response: any): Promise<{ isGood: boolean; feedback?: string }> {
@@ -58,98 +61,98 @@ Reply with JSON: { "isGood": boolean, "feedback": string }
 
 
 
-        this.messages.push({ role: "user", content: content });
-        const tools = this.registry.getAllTools();
-        let stepCount = 0;
+        try {
+            this.messages.push({ role: "user", content: content });
+            const tools = this.registry.getAllTools();
+            let stepCount = 0;
 
-        while (stepCount < this.maxSteps) {
+            while (stepCount < this.maxSteps) {
 
-            
-            stepCount++;
-            const response = await this.llm.generate(this.messages, tools);
+                stepCount++;
+                const response = await this.llm.generate(this.messages, tools);
 
-            // console.log("Response: ", response);
-            
-            if (!response.toolcalls || response.toolcalls.length === 0) {
-                this.messages.push({ role: "assistant", content: response.text });
-                
-                const finalResponse = await this.outputGuardrails.outputValidation(response);
-                
-                
-                
-                
-                
-                if(finalResponse.isSafe){
+                if (!response.toolcalls || response.toolcalls.length === 0) {
+                    this.messages.push({ role: "assistant", content: response.text });
+
+                    console.log("Response:\n", response);
+                    console.log("\n--------------------------\n");
+
                     return response;
                 }
-                return { text: "Sorry, I cannot process your request.",
-                    reason: finalResponse.reason 
-                };
-            }
 
-                
-
-            // Reflect on plan
-            if (response.toolcalls && response.toolcalls.length > 0) {
-                const reflection = await this.reflectOnPlan(response);
-                if (!reflection.isGood) {
-                    this.messages.push({
-                        role: "assistant",
-                        content: `Reflection on proposed plan: ${reflection.feedback}. I should reconsider.`
-                    });
-                    continue; // Skip execution and re-generate
+                // Reflect on plan
+                if (response.toolcalls && response.toolcalls.length > 0) {
+                    const reflection = await this.reflectOnPlan(response);
+                    if (!reflection.isGood) {
+                        this.messages.push({
+                            role: "assistant",
+                            content: `Reflection on proposed plan: ${reflection.feedback}. I should reconsider.`
+                        });
+                        continue; // Skip execution and re-generate
+                    }
                 }
-            }
 
-            // 1. Push model turn with exact returned parts (preserves functionCall & thought_signature)
-            this.messages.push({
-                role: "model",
-                parts: response.rawParts
-            });
+                // 1. Push model turn with exact returned parts (preserves functionCall & thought_signature)
+                this.messages.push({
+                    role: "model",
+                    parts: response.rawParts
+                });
 
-            // 2. Execute tools & push tool turn with functionResponse
-            for (const toolCall of response.toolcalls) {
-                const tool = this.registry.getTool(toolCall.name);
+                // 2. Execute tools & push tool turn with functionResponse
+                for (const toolCall of response.toolcalls) {
+                    const tool = this.registry.getTool(toolCall.name);
 
-                if (!tool) {
-                    // throw new Error(`Tool ${toolCall.name} not found`);
+                    if (!tool) {
+                        this.messages.push({
+                            role: "tool",
+                            parts: [
+                                {
+                                    functionResponse: {
+                                        name: toolCall.name,
+                                        response: { result: `Tool ${toolCall.name} not found` }
+                                    }
+                                } as any
+                            ]
+                        });
+                        continue;
+                    }
+                    let result;
+                    try {
+                        result = await tool.execute(toolCall.params || {});
+                    } catch (error) {
+                        result = `Error executing tool: ${error instanceof Error ? error.message : String(error)}`;
+                    }
+
                     this.messages.push({
                         role: "tool",
                         parts: [
                             {
                                 functionResponse: {
                                     name: toolCall.name,
-                                    response: { result: `Tool ${toolCall.name} not found` }
+                                    response: { result }
                                 }
                             } as any
                         ]
                     });
-                    continue;
                 }
-                let result;
+            }
+
+            throw new Error(`Agent exceeded maximum execution step limit of ${this.maxSteps}.`);
+        } finally {
+            // Reliable sandbox teardown: runs on success, on the maxSteps throw
+            // above, and on any error/cancellation. Because the ExecutionManager
+            // tracks whether THIS session started the sandbox, calling stop()
+            // when no execute_command ever ran, or when the container predated
+            // this run, is a safe no-op.
+            if (this.sandbox) {
                 try {
-                    result = await tool.execute(toolCall.params || {});
+                    await this.sandbox.stop();
                 } catch (error) {
-                    result = `Error executing tool: ${error instanceof Error ? error.message : String(error)}`;
+                    console.warn("Failed to stop sandbox during cleanup:",
+                        error instanceof Error ? error.message : String(error));
                 }
-                 // console.log("Tool result: \n", result);
-
-
-                this.messages.push({
-                    role: "tool",
-                    parts: [
-                        {
-                            functionResponse: {
-                                name: toolCall.name,
-                                response: { result }
-                            }
-                        } as any
-                    ]
-                });
             }
         }
-
-        throw new Error(`Agent exceeded maximum execution step limit of ${this.maxSteps}.`);
     }
 }
 

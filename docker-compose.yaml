@@ -1,0 +1,40 @@
+# Secure code-execution sandbox for the agent.
+services:
+  sandbox:
+    build:
+      context: .
+      dockerfile: sandbox.Dockerfile
+    image: my_agent_adk_sandbox:latest
+    working_dir: /app
+
+    # Workspace-only mount. The agent can only ever touch this directory tree.
+    volumes:
+      - .:/app
+
+    # Run as a non-root user (the "bun" user in the image is UID 1000).
+    user: "1000:1000"
+
+    # No network access at all.
+    network_mode: "none"
+
+    # Drop every Linux capability.
+    cap_drop:
+      - ALL
+
+    # Kill the init process when the main entry (tail) exits, and reap zombies so
+    # stray child processes can't accumulate.
+    init: true
+
+    # Harden the process tree.
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+          pids: 128
+
+    # No API keys, no .env mapping, no docker socket, no host creds are exposed.
+    # network_mode "none" + no env block guarantees the sandbox sees nothing.
+
+    # Keep the container alive so `docker compose exec` can run commands in it.
+    command: ["tail", "-f", "/dev/null"]

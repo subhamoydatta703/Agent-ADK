@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Tool } from "./ToolRegistry";
 import { createInterface } from "node:readline/promises";
+import { sandboxManager } from "./ExecutionManager";
 
 const executeSchema = z.object({
     command: z
@@ -16,6 +17,17 @@ const executeSchema = z.object({
             "Arguments for the executable. Each argument must be a separate string."
         )
         .default([]),
+
+    timeoutMs: z
+        .number()
+        .int()
+        .positive()
+        .max(300_000)
+        .optional()
+        .describe(
+            "Optional hard execution timeout in milliseconds. Defaults to 60_000 (1 minute). " +
+            "Exceeding the timeout kills the command and returns a clear timeout error."
+        ),
 });
 
 export type CommandPolicy = {
@@ -37,6 +49,7 @@ const commandPolicy: CommandPolicy = {
         "npx",
         "tsc",
         "python",
+        "tail",
     ],
     blocked: [
         "ls",
@@ -118,7 +131,7 @@ export const executeCommand: Tool = {
     name: "execute_command",
 
     description:
-        "Execute a real, standalone executable directly (no shell involved). " +
+        "Execute a real, standalone executable directly (in a Docker sandbox). " +
         "USE THIS only for build/run/package-manager/VCS tools such as git, bun, node, npm, npx, tsc, python. " +
         "DO NOT use this for file inspection or shell built-ins/aliases " +
         "(ls, cat, dir, type, cd, echo, mkdir, rmdir, find, cmd, grep, pwd, rm, cp, mv, touch, which, where) " +
@@ -145,23 +158,33 @@ export const executeCommand: Tool = {
         }
 
         try {
-            const proc = Bun.spawn([command, ...parsed.args], {
-                stdout: "pipe",
-                stderr: "pipe",
-            });
-
-            const stdout = await new Response(proc.stdout).text();
-            const stderr = await new Response(proc.stderr).text();
-            const exitCode = await proc.exited;
-
-            return {
-                success: exitCode === 0,
-                status: "executed" as const,
+            // The terminal command guardrail (blocked / safe / confirmation) has
+            // already run above. Delegating the actual Docker execution to the
+            // shared ExecutionManager:
+            //  - It only starts the sandbox when Compose reports it down,
+            //  - runs the command with `docker compose exec -T sandbox ...`,
+            //  - enforces a hard timeout and kills the process on timeout,
+            //  - and does NOT stop the sandbox after this single command (it is
+            //    torn down once by the Agent when the task finishes).
+            const result = await sandboxManager.execute({
                 command,
                 args: parsed.args,
-                exitCode,
-                stdout,
-                stderr,
+                timeoutMs: parsed.timeoutMs,
+            });
+
+            return {
+                success: result.success,
+                status: result.status,
+                command,
+                args: parsed.args,
+                exitCode: result.exitCode,
+                stdout: result.stdout,
+                stderr: result.stderr,
+                hint:
+                    result.status === "timeout"
+                        ? "The command was killed because it exceeded the execution timeout. " +
+                          "If a longer run is genuinely required, retry with an explicit timeoutMs and keep it within bounds."
+                        : undefined,
             };
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);

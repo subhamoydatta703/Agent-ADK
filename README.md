@@ -34,7 +34,19 @@ To run the agent demo:
 bun run src/index.ts
 ```
 
-## Project Structure
+## Docker Lifecycle
+
+The project includes a `docker-compose.yaml` to run a secure development sandbox.
+
+### Standardized Docker Workflow
+
+- **Build image**: `docker compose build`
+- **Start services**: `docker compose up -d`
+- **Monitor logs**: `docker compose logs -f`
+- **Access Sandbox**: `docker compose exec sandbox /bin/sh`
+- **Cleanup**: `docker compose down`
+
+For more information, see `docs/DOCKER_LIFECYCLE_MANAGEMENT_PLAN.md`.
 
 ```
 .
